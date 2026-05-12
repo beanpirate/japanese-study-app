@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>日本語 Japanese Study App</title>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fff; color: #1a1a1a; }
+  :root {
+    --color-background-primary: #ffffff;
+    --color-background-secondary: #f5f5f3;
+    --color-text-primary: #1a1a1a;
+    --color-text-secondary: #6b6b6b;
+    --color-border-primary: #1a1a1a;
+    --color-border-secondary: #d1d1ce;
+    --color-border-tertiary: #e8e8e5;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  #root { padding: 16px; max-width: 740px; margin: 0 auto; }
+  select, input, textarea, button { font-family: inherit; }
+  ruby { display: inline-flex; flex-direction: column-reverse; align-items: center; }
+  rt { font-size: 10px; text-align: center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+const GROUP_PALETTE = ["#378ADD","#1D9E75","#D85A30","#D4537E","#7F77DD","#BA7517","#639922","#E24B4A"];
+
+const LESSON_VOCAB_MAP = {
+  1:[101,102,103,104,105,106,107,108,109,110],
+  2:[201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216],
+  3:[301,302,303,304,305,306,307,308,309,310],
+  4:[401,402,403,404,405,406,407,408,409,410,411,412],
+  5:[501,502,503,504,505,506,507,508,509,510,511,512],
+  6:[601,602,603,604,605,606,607,608,609,610,611,612,613,614,615,616,617,618],
+  7:[701,702,703,704,705,706,707,708,709,710,711],
+  8:[801,802,803,804,805,806,807,808,809,810,811,812],
+  9:[901,902,903,904,905,906,907,908,909,910],
+  10:[1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013],
+  11:[1101,1102,1103,1104,1105,1106,1107,1108,1109,1110,1111,1112],
+  12:[1113,1114,1115,1116,1117,1118],
+  13:[1119,1120,1121,1122,1123,1124],
+  16:[1601,1602,1603,1604,1605,1606,1607,1608,1609,1610,1611,1612,1613,1614,1615,1616,1617,1618],
+  21:[2101,2102,2103,2104,2105,2106,2107,2108,2109,2110,2111,2112,2113],
+  26:[2601,2602,2603,2604,2605,2606,2607,2608,2609,2610,2611],
+  31:[3101,3102,3103,3104],32:[3105,3106,3107,3108],33:[3109,3110,3111],
+  34:[3112,3113,3114],35:[3115,3116,3117,3118,3119,3120],
+  41:[4101,4102,4103,4104],42:[4105,4106,4107,4108],43:[4109,4110,4111,4112],
+  44:[4113,4114,4115,4116],45:[4117,4118,4119,4120],46:[4121,4122,4123,4124],
+  47:[4125,4126,4127],48:[4128,4129,4130],
+};
+
+const MNN_VOCAB = [
+  {id:101,japanese:"わたし",hiragana:"わたし",romaji:"watashi",meaning:"I / me",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:102,japanese:"あなた",hiragana:"あなた",romaji:"anata",meaning:"you",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:103,japanese:"かれ",hiragana:"かれ",romaji:"kare",meaning:"he",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:104,japanese:"かのじょ",hiragana:"かのじょ",romaji:"kanojo",meaning:"she",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:105,japanese:"がくせい",hiragana:"がくせい",romaji:"gakusei",meaning:"student",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:106,japanese:"せんせい",hiragana:"せんせい",romaji:"sensei",meaning:"teacher",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:107,japanese:"かいしゃいん",hiragana:"かいしゃいん",romaji:"kaishain",meaning:"company employee",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:108,japanese:"いしゃ",hiragana:"いしゃ",romaji:"isha",meaning:"doctor",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:109,japanese:"けんきゅうしゃ",hiragana:"けんきゅうしゃ",romaji:"kenkyuusha",meaning:"researcher",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:110,japanese:"にほん",hiragana:"にほん",romaji:"nihon",meaning:"Japan",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:201,japanese:"これ",hiragana:"これ",romaji:"kore",meaning:"this (near speaker)",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:202,japanese:"それ",hiragana:"それ",romaji:"sore",meaning:"that (near listener)",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:203,japanese:"あれ",hiragana:"あれ",romaji:"are",meaning:"that (over there)",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:204,japanese:"ほん",hiragana:"ほん",romaji:"hon",meaning:"book",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:205,japanese:"じしょ",hiragana:"じしょ",romaji:"jisho",meaning:"dictionary",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:206,japanese:"ざっし",hiragana:"ざっし",romaji:"zasshi",meaning:"magazine",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:207,japanese:"しんぶん",hiragana:"しんぶん",romaji:"shinbun",meaning:"newspaper",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:208,japanese:"ノート",hiragana:"ノート",romaji:"nooto",meaning:"notebook",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:209,japanese:"テキスト",hiragana:"テキスト",romaji:"tekisuto",meaning:"textbook",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:210,japanese:"えんぴつ",hiragana:"えんぴつ",romaji:"enpitsu",meaning:"pencil",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:211,japanese:"ボールペン",hiragana:"ボールペン",romaji:"boorupen",meaning:"ballpoint pen",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:212,japanese:"かさ",hiragana:"かさ",romaji:"kasa",meaning:"umbrella",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:213,japanese:"かばん",hiragana:"かばん",romaji:"kaban",meaning:"bag",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:214,japanese:"くつ",hiragana:"くつ",romaji:"kutsu",meaning:"shoes",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:215,japanese:"ネクタイ",hiragana:"ネクタイ",romaji:"nekutai",meaning:"necktie",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:216,japanese:"とけい",hiragana:"とけい",romaji:"tokei",meaning:"watch / clock",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:301,japanese:"ここ",hiragana:"ここ",romaji:"koko",meaning:"here",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:302,japanese:"そこ",hiragana:"そこ",romaji:"soko",meaning:"there (near listener)",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:303,japanese:"あそこ",hiragana:"あそこ",romaji:"asoko",meaning:"over there",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:304,japanese:"トイレ",hiragana:"トイレ",romaji:"toire",meaning:"toilet",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:305,japanese:"でぐち",hiragana:"でぐち",romaji:"deguchi",meaning:"exit",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:306,japanese:"いりぐち",hiragana:"いりぐち",romaji:"iriguchi",meaning:"entrance",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:307,japanese:"かいだん",hiragana:"かいだん",romaji:"kaidan",meaning:"stairs",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:308,japanese:"エレベーター",hiragana:"エレベーター",romaji:"erebeetaa",meaning:"elevator",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:309,japanese:"じむしょ",hiragana:"じむしょ",romaji:"jimusho",meaning:"office",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:310,japanese:"しょくどう",hiragana:"しょくどう",romaji:"shokudou",meaning:"cafeteria / dining room",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:401,japanese:"いつ",hiragana:"いつ",romaji:"itsu",meaning:"when",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:402,japanese:"なんじ",hiragana:"なんじ",romaji:"nanji",meaning:"what time",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:403,japanese:"いま",hiragana:"いま",romaji:"ima",meaning:"now",type:"other",verbGroup:null,favorite:false,groups:[]},
+  {id:404,japanese:"ごぜん",hiragana:"ごぜん",romaji:"gozen",meaning:"AM / morning",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:405,japanese:"ごご",hiragana:"ごご",romaji:"gogo",meaning:"PM / afternoon",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:406,japanese:"はじまります",hiragana:"はじまります",romaji:"hajimarimasu",meaning:"to begin / start",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:407,japanese:"おわります",hiragana:"おわります",romaji:"owarimasu",meaning:"to end / finish",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:408,japanese:"やすみ",hiragana:"やすみ",romaji:"yasumi",meaning:"rest / holiday",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:409,japanese:"ひるやすみ",hiragana:"ひるやすみ",romaji:"hiruyasumi",meaning:"lunch break",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:410,japanese:"ばんごはん",hiragana:"ばんごはん",romaji:"bangohan",meaning:"dinner",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:411,japanese:"あさごはん",hiragana:"あさごはん",romaji:"asagohan",meaning:"breakfast",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:412,japanese:"ひるごはん",hiragana:"ひるごはん",romaji:"hirugohan",meaning:"lunch",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:501,japanese:"いきます",hiragana:"いきます",romaji:"ikimasu",meaning:"to go",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:502,japanese:"きます",hiragana:"きます",romaji:"kimasu",meaning:"to come",type:"verb",verbGroup:3,favorite:false,groups:[]},
+  {id:503,japanese:"かえります",hiragana:"かえります",romaji:"kaerimasu",meaning:"to return / go home",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:504,japanese:"がっこう",hiragana:"がっこう",romaji:"gakkou",meaning:"school",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:505,japanese:"スーパー",hiragana:"スーパー",romaji:"suupaa",meaning:"supermarket",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:506,japanese:"えき",hiragana:"えき",romaji:"eki",meaning:"station",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:507,japanese:"ひこうき",hiragana:"ひこうき",romaji:"hikouki",meaning:"airplane",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:508,japanese:"でんしゃ",hiragana:"でんしゃ",romaji:"densha",meaning:"train",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:509,japanese:"バス",hiragana:"バス",romaji:"basu",meaning:"bus",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:510,japanese:"タクシー",hiragana:"タクシー",romaji:"takushii",meaning:"taxi",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:511,japanese:"くるま",hiragana:"くるま",romaji:"kuruma",meaning:"car",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:512,japanese:"じてんしゃ",hiragana:"じてんしゃ",romaji:"jitensha",meaning:"bicycle",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:601,japanese:"たべます",hiragana:"たべます",romaji:"tabemasu",meaning:"to eat",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:602,japanese:"のみます",hiragana:"のみます",romaji:"nomimasu",meaning:"to drink",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:603,japanese:"すいます",hiragana:"すいます",romaji:"suimasu",meaning:"to smoke",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:604,japanese:"みます",hiragana:"みます",romaji:"mimasu",meaning:"to see / watch",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:605,japanese:"ききます",hiragana:"ききます",romaji:"kikimasu",meaning:"to listen / hear",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:606,japanese:"よみます",hiragana:"よみます",romaji:"yomimasu",meaning:"to read",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:607,japanese:"かきます",hiragana:"かきます",romaji:"kakimasu",meaning:"to write",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:608,japanese:"かいます",hiragana:"かいます",romaji:"kaimasu",meaning:"to buy",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:609,japanese:"とります",hiragana:"とります",romaji:"torimasu",meaning:"to take",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:610,japanese:"おきます",hiragana:"おきます",romaji:"okimasu",meaning:"to get up",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:611,japanese:"ねます",hiragana:"ねます",romaji:"nemasu",meaning:"to sleep / go to bed",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:612,japanese:"はたらきます",hiragana:"はたらきます",romaji:"hatarakimasu",meaning:"to work",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:613,japanese:"やすみます",hiragana:"やすみます",romaji:"yasumimasu",meaning:"to rest / take a day off",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:614,japanese:"コーヒー",hiragana:"コーヒー",romaji:"koohii",meaning:"coffee",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:615,japanese:"おちゃ",hiragana:"おちゃ",romaji:"ocha",meaning:"green tea",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:616,japanese:"みず",hiragana:"みず",romaji:"mizu",meaning:"water",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:617,japanese:"おさけ",hiragana:"おさけ",romaji:"osake",meaning:"alcohol / sake",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:618,japanese:"ビール",hiragana:"ビール",romaji:"biiru",meaning:"beer",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:701,japanese:"あげます",hiragana:"あげます",romaji:"agemasu",meaning:"to give",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:702,japanese:"もらいます",hiragana:"もらいます",romaji:"moraimasu",meaning:"to receive",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:703,japanese:"かします",hiragana:"かします",romaji:"kashimasu",meaning:"to lend",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:704,japanese:"かります",hiragana:"かります",romaji:"karimasu",meaning:"to borrow",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:705,japanese:"おしえます",hiragana:"おしえます",romaji:"oshiemasu",meaning:"to teach / tell",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:706,japanese:"でんわ",hiragana:"でんわ",romaji:"denwa",meaning:"telephone",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:707,japanese:"はな",hiragana:"はな",romaji:"hana",meaning:"flower",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:708,japanese:"にく",hiragana:"にく",romaji:"niku",meaning:"meat",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:709,japanese:"さかな",hiragana:"さかな",romaji:"sakana",meaning:"fish",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:710,japanese:"やさい",hiragana:"やさい",romaji:"yasai",meaning:"vegetables",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:711,japanese:"くだもの",hiragana:"くだもの",romaji:"kudamono",meaning:"fruit",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:801,japanese:"あります",hiragana:"あります",romaji:"arimasu",meaning:"to exist (inanimate)",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:802,japanese:"います",hiragana:"います",romaji:"imasu",meaning:"to exist (animate)",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:803,japanese:"うえ",hiragana:"うえ",romaji:"ue",meaning:"above / on top",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:804,japanese:"した",hiragana:"した",romaji:"shita",meaning:"below / under",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:805,japanese:"まえ",hiragana:"まえ",romaji:"mae",meaning:"in front of",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:806,japanese:"うしろ",hiragana:"うしろ",romaji:"ushiro",meaning:"behind",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:807,japanese:"みぎ",hiragana:"みぎ",romaji:"migi",meaning:"right",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:808,japanese:"ひだり",hiragana:"ひだり",romaji:"hidari",meaning:"left",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:809,japanese:"なか",hiragana:"なか",romaji:"naka",meaning:"inside / middle",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:810,japanese:"そと",hiragana:"そと",romaji:"soto",meaning:"outside",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:811,japanese:"となり",hiragana:"となり",romaji:"tonari",meaning:"next to",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:812,japanese:"ちかく",hiragana:"ちかく",romaji:"chikaku",meaning:"near / nearby",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:901,japanese:"すきな",hiragana:"すきな",romaji:"suki na",meaning:"like / fond of",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:902,japanese:"きらいな",hiragana:"きらいな",romaji:"kirai na",meaning:"dislike",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:903,japanese:"じょうずな",hiragana:"じょうずな",romaji:"jouzu na",meaning:"good at / skilled",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:904,japanese:"へたな",hiragana:"へたな",romaji:"heta na",meaning:"bad at / unskilled",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:905,japanese:"ダンス",hiragana:"ダンス",romaji:"dansu",meaning:"dance",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:906,japanese:"スポーツ",hiragana:"スポーツ",romaji:"supootsu",meaning:"sport",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:907,japanese:"おんがく",hiragana:"おんがく",romaji:"ongaku",meaning:"music",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:908,japanese:"うた",hiragana:"うた",romaji:"uta",meaning:"song",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:909,japanese:"うたいます",hiragana:"うたいます",romaji:"utaimasu",meaning:"to sing",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:910,japanese:"りょうり",hiragana:"りょうり",romaji:"ryouri",meaning:"cooking / cuisine",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1001,japanese:"わかります",hiragana:"わかります",romaji:"wakarimasu",meaning:"to understand",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:1002,japanese:"しっています",hiragana:"しっています",romaji:"shitte imasu",meaning:"to know",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:1003,japanese:"かぞく",hiragana:"かぞく",romaji:"kazoku",meaning:"family",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1004,japanese:"ちち",hiragana:"ちち",romaji:"chichi",meaning:"(my) father",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1005,japanese:"はは",hiragana:"はは",romaji:"haha",meaning:"(my) mother",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1006,japanese:"おとうさん",hiragana:"おとうさん",romaji:"otousan",meaning:"someone's father",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1007,japanese:"おかあさん",hiragana:"おかあさん",romaji:"okaasan",meaning:"someone's mother",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1008,japanese:"あに",hiragana:"あに",romaji:"ani",meaning:"(my) older brother",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1009,japanese:"あね",hiragana:"あね",romaji:"ane",meaning:"(my) older sister",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1010,japanese:"おとうと",hiragana:"おとうと",romaji:"otouto",meaning:"(my) younger brother",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1011,japanese:"いもうと",hiragana:"いもうと",romaji:"imouto",meaning:"(my) younger sister",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1012,japanese:"こども",hiragana:"こども",romaji:"kodomo",meaning:"child",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1013,japanese:"ともだち",hiragana:"ともだち",romaji:"tomodachi",meaning:"friend",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1101,japanese:"おおきい",hiragana:"おおきい",romaji:"ookii",meaning:"big / large",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1102,japanese:"ちいさい",hiragana:"ちいさい",romaji:"chiisai",meaning:"small / little",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1103,japanese:"あたらしい",hiragana:"あたらしい",romaji:"atarashii",meaning:"new",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1104,japanese:"ふるい",hiragana:"ふるい",romaji:"furui",meaning:"old (things)",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1105,japanese:"いい",hiragana:"いい",romaji:"ii",meaning:"good",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1106,japanese:"わるい",hiragana:"わるい",romaji:"warui",meaning:"bad",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1107,japanese:"たかい",hiragana:"たかい",romaji:"takai",meaning:"expensive / tall / high",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1108,japanese:"やすい",hiragana:"やすい",romaji:"yasui",meaning:"cheap / inexpensive",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1109,japanese:"ひくい",hiragana:"ひくい",romaji:"hikui",meaning:"low / short (height)",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1110,japanese:"あつい",hiragana:"あつい",romaji:"atsui",meaning:"hot",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1111,japanese:"さむい",hiragana:"さむい",romaji:"samui",meaning:"cold (weather)",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1112,japanese:"つめたい",hiragana:"つめたい",romaji:"tsumetai",meaning:"cold (to touch/drink)",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1113,japanese:"むずかしい",hiragana:"むずかしい",romaji:"muzukashii",meaning:"difficult",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1114,japanese:"やさしい",hiragana:"やさしい",romaji:"yasashii",meaning:"easy / kind",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1115,japanese:"たのしい",hiragana:"たのしい",romaji:"tanoshii",meaning:"fun / enjoyable",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1116,japanese:"おもしろい",hiragana:"おもしろい",romaji:"omoshiroi",meaning:"interesting / funny",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1117,japanese:"つまらない",hiragana:"つまらない",romaji:"tsumaranai",meaning:"boring",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1118,japanese:"いそがしい",hiragana:"いそがしい",romaji:"isogashii",meaning:"busy",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1119,japanese:"きれいな",hiragana:"きれいな",romaji:"kirei na",meaning:"beautiful / clean",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1120,japanese:"しずかな",hiragana:"しずかな",romaji:"shizuka na",meaning:"quiet",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1121,japanese:"にぎやかな",hiragana:"にぎやかな",romaji:"nigiyaka na",meaning:"lively / bustling",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1122,japanese:"べんりな",hiragana:"べんりな",romaji:"benri na",meaning:"convenient",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1123,japanese:"ゆうめいな",hiragana:"ゆうめいな",romaji:"yuumei na",meaning:"famous",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1124,japanese:"すてきな",hiragana:"すてきな",romaji:"suteki na",meaning:"wonderful / lovely",type:"adjective",verbGroup:null,favorite:false,groups:[]},
+  {id:1601,japanese:"つかいます",hiragana:"つかいます",romaji:"tsukaimasu",meaning:"to use",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:1602,japanese:"あけます",hiragana:"あけます",romaji:"akemasu",meaning:"to open",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:1603,japanese:"しめます",hiragana:"しめます",romaji:"shimemasu",meaning:"to close",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:1604,japanese:"つけます",hiragana:"つけます",romaji:"tsukemasu",meaning:"to turn on",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:1605,japanese:"けします",hiragana:"けします",romaji:"keshimasu",meaning:"to turn off / erase",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:1606,japanese:"すわります",hiragana:"すわります",romaji:"suwarimasu",meaning:"to sit down",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:1607,japanese:"たちます",hiragana:"たちます",romaji:"tachimasu",meaning:"to stand up",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:1608,japanese:"だします",hiragana:"だします",romaji:"dashimasu",meaning:"to take out / submit",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:1609,japanese:"はいります",hiragana:"はいります",romaji:"hairimasu",meaning:"to enter",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:1610,japanese:"でます",hiragana:"でます",romaji:"demasu",meaning:"to leave / come out",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:1611,japanese:"けっこんします",hiragana:"けっこんします",romaji:"kekkon shimasu",meaning:"to marry",type:"verb",verbGroup:3,favorite:false,groups:[]},
+  {id:1612,japanese:"べんきょうします",hiragana:"べんきょうします",romaji:"benkyou shimasu",meaning:"to study",type:"verb",verbGroup:3,favorite:false,groups:[]},
+  {id:1613,japanese:"でんわします",hiragana:"でんわします",romaji:"denwa shimasu",meaning:"to telephone",type:"verb",verbGroup:3,favorite:false,groups:[]},
+  {id:1614,japanese:"まど",hiragana:"まど",romaji:"mado",meaning:"window",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1615,japanese:"ドア",hiragana:"ドア",romaji:"doa",meaning:"door",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1616,japanese:"でんき",hiragana:"でんき",romaji:"denki",meaning:"electricity / light",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1617,japanese:"エアコン",hiragana:"エアコン",romaji:"eakon",meaning:"air conditioner",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:1618,japanese:"パソコン",hiragana:"パソコン",romaji:"pasokon",meaning:"personal computer",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:2101,japanese:"できます",hiragana:"できます",romaji:"dekimasu",meaning:"can do / be able to",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:2102,japanese:"あそびます",hiragana:"あそびます",romaji:"asobimasu",meaning:"to play / hang out",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:2103,japanese:"およぎます",hiragana:"およぎます",romaji:"oyogimasu",meaning:"to swim",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:2104,japanese:"はなします",hiragana:"はなします",romaji:"hanashimasu",meaning:"to speak / talk",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:2105,japanese:"まちます",hiragana:"まちます",romaji:"machimasu",meaning:"to wait",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:2106,japanese:"いそぎます",hiragana:"いそぎます",romaji:"isogimasu",meaning:"to hurry",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:2107,japanese:"もちます",hiragana:"もちます",romaji:"mochimasu",meaning:"to hold / carry",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:2108,japanese:"よびます",hiragana:"よびます",romaji:"yobimasu",meaning:"to call / invite",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:2109,japanese:"すみます",hiragana:"すみます",romaji:"sumimasu",meaning:"to live / reside",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:2110,japanese:"ピアノ",hiragana:"ピアノ",romaji:"piano",meaning:"piano",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:2111,japanese:"ギター",hiragana:"ギター",romaji:"gitaa",meaning:"guitar",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:2112,japanese:"スポーツ",hiragana:"スポーツ",romaji:"supootsu",meaning:"sport",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:2113,japanese:"りょうり",hiragana:"りょうり",romaji:"ryouri",meaning:"cooking / cuisine",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:2601,japanese:"くれます",hiragana:"くれます",romaji:"kuremasu",meaning:"to give (to me)",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:2602,japanese:"おくります",hiragana:"おくります",romaji:"okurimasu",meaning:"to send",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:2603,japanese:"つれていきます",hiragana:"つれていきます",romaji:"tsurete ikimasu",meaning:"to take (a person)",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:2604,japanese:"みせます",hiragana:"みせます",romaji:"misemasu",meaning:"to show",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:2605,japanese:"つくります",hiragana:"つくります",romaji:"tsukurimasu",meaning:"to make / create",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:2606,japanese:"なります",hiragana:"なります",romaji:"narimasu",meaning:"to become",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:2607,japanese:"しごと",hiragana:"しごと",romaji:"shigoto",meaning:"work / job",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:2608,japanese:"かいもの",hiragana:"かいもの",romaji:"kaimono",meaning:"shopping",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:2609,japanese:"りょこう",hiragana:"りょこう",romaji:"ryokou",meaning:"travel / trip",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:2610,japanese:"プレゼント",hiragana:"プレゼント",romaji:"purezento",meaning:"present / gift",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:2611,japanese:"てがみ",hiragana:"てがみ",romaji:"tegami",meaning:"letter",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:3101,japanese:"おぼえます",hiragana:"おぼえます",romaji:"oboemasu",meaning:"to memorise / remember",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:3102,japanese:"わすれます",hiragana:"わすれます",romaji:"wasuremasu",meaning:"to forget",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:3103,japanese:"なくします",hiragana:"なくします",romaji:"nakushimasu",meaning:"to lose",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:3104,japanese:"みつけます",hiragana:"みつけます",romaji:"mitsukemasu",meaning:"to find",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:3105,japanese:"きります",hiragana:"きります",romaji:"kirimasu",meaning:"to cut",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:3106,japanese:"おります",hiragana:"おります",romaji:"orimasu",meaning:"to get off / fold",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:3107,japanese:"のります",hiragana:"のります",romaji:"norimasu",meaning:"to ride / get on",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:3108,japanese:"あらいます",hiragana:"あらいます",romaji:"araimasu",meaning:"to wash",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:3109,japanese:"そうじします",hiragana:"そうじします",romaji:"souji shimasu",meaning:"to clean / tidy",type:"verb",verbGroup:3,favorite:false,groups:[]},
+  {id:3110,japanese:"せんたくします",hiragana:"せんたくします",romaji:"sentaku shimasu",meaning:"to do laundry",type:"verb",verbGroup:3,favorite:false,groups:[]},
+  {id:3111,japanese:"りょうりします",hiragana:"りょうりします",romaji:"ryouri shimasu",meaning:"to cook",type:"verb",verbGroup:3,favorite:false,groups:[]},
+  {id:3112,japanese:"かんがえます",hiragana:"かんがえます",romaji:"kangaemasu",meaning:"to think / consider",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:3113,japanese:"きめます",hiragana:"きめます",romaji:"kimemasu",meaning:"to decide",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:3114,japanese:"やめます",hiragana:"やめます",romaji:"yamemasu",meaning:"to quit / stop",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:3115,japanese:"みがきます",hiragana:"みがきます",romaji:"migakimasu",meaning:"to brush / polish",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:3116,japanese:"かぶります",hiragana:"かぶります",romaji:"kaburimasu",meaning:"to put on (hat)",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:3117,japanese:"はきます",hiragana:"はきます",romaji:"hakimasu",meaning:"to put on (shoes/trousers)",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:3118,japanese:"きます",hiragana:"きます",romaji:"kimasu",meaning:"to put on (clothing)",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:3119,japanese:"かけます",hiragana:"かけます",romaji:"kakemasu",meaning:"to put on (glasses)",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:3120,japanese:"します",hiragana:"します",romaji:"shimasu",meaning:"to do / wear (accessories)",type:"verb",verbGroup:3,favorite:false,groups:[]},
+  {id:4101,japanese:"やります",hiragana:"やります",romaji:"yarimasu",meaning:"to do / perform",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:4102,japanese:"すぎます",hiragana:"すぎます",romaji:"sugimasu",meaning:"to exceed / pass",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:4103,japanese:"みえます",hiragana:"みえます",romaji:"miemasu",meaning:"to be visible / can see",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:4104,japanese:"きこえます",hiragana:"きこえます",romaji:"kikoemasu",meaning:"to be audible / can hear",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:4105,japanese:"つづきます",hiragana:"つづきます",romaji:"tsuzukimasu",meaning:"to continue",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:4106,japanese:"かわります",hiragana:"かわります",romaji:"kawarimasu",meaning:"to change",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:4107,japanese:"ふえます",hiragana:"ふえます",romaji:"fuemasu",meaning:"to increase",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:4108,japanese:"へります",hiragana:"へります",romaji:"herimasu",meaning:"to decrease",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:4109,japanese:"こわれます",hiragana:"こわれます",romaji:"kowaremasu",meaning:"to break / get broken",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:4110,japanese:"なおります",hiragana:"なおります",romaji:"naorimasu",meaning:"to be fixed / recover",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:4111,japanese:"あつまります",hiragana:"あつまります",romaji:"atsumarimasu",meaning:"to gather / assemble",type:"verb",verbGroup:1,favorite:false,groups:[]},
+  {id:4112,japanese:"わかれます",hiragana:"わかれます",romaji:"wakaremasu",meaning:"to separate / part",type:"verb",verbGroup:2,favorite:false,groups:[]},
+  {id:4113,japanese:"けが",hiragana:"けが",romaji:"kega",meaning:"injury",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4114,japanese:"びょうき",hiragana:"びょうき",romaji:"byouki",meaning:"illness / sickness",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4115,japanese:"くすり",hiragana:"くすり",romaji:"kusuri",meaning:"medicine",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4116,japanese:"びょういん",hiragana:"びょういん",romaji:"byouin",meaning:"hospital",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4117,japanese:"てんき",hiragana:"てんき",romaji:"tenki",meaning:"weather",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4118,japanese:"ゆき",hiragana:"ゆき",romaji:"yuki",meaning:"snow",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4119,japanese:"あめ",hiragana:"あめ",romaji:"ame",meaning:"rain",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4120,japanese:"かぜ",hiragana:"かぜ",romaji:"kaze",meaning:"wind / cold (illness)",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4121,japanese:"そら",hiragana:"そら",romaji:"sora",meaning:"sky",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4122,japanese:"やま",hiragana:"やま",romaji:"yama",meaning:"mountain",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4123,japanese:"うみ",hiragana:"うみ",romaji:"umi",meaning:"sea / ocean",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4124,japanese:"かわ",hiragana:"かわ",romaji:"kawa",meaning:"river",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4125,japanese:"まち",hiragana:"まち",romaji:"machi",meaning:"town / city",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4126,japanese:"くに",hiragana:"くに",romaji:"kuni",meaning:"country / homeland",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4127,japanese:"むら",hiragana:"むら",romaji:"mura",meaning:"village",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4128,japanese:"くも",hiragana:"くも",romaji:"kumo",meaning:"cloud",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4129,japanese:"かぜ",hiragana:"かぜ",romaji:"kaze",meaning:"wind",type:"noun",verbGroup:null,favorite:false,groups:[]},
+  {id:4130,japanese:"はれ",hiragana:"はれ",romaji:"hare",meaning:"clear / sunny weather",type:"noun",verbGroup:null,favorite:false,groups:[]},
+];
+
+const DEFAULT_GRAMMAR = [
+  {id:1,pattern:"〜ています",romaji:"~te imasu",meaning:"Ongoing action / current state",example:"食べています — I am eating",level:"N5",favorite:false,notes:"",groups:[]},
+  {id:2,pattern:"〜たい",romaji:"~tai",meaning:"Want to do something",example:"食べたい — I want to eat",level:"N5",favorite:false,notes:"",groups:[]},
+  {id:3,pattern:"〜から",romaji:"~kara",meaning:"Because / since",example:"雨だから — Because it's raining",level:"N5",favorite:false,notes:"",groups:[]},
+  {id:4,pattern:"〜ても",romaji:"~temo",meaning:"Even if / even though",example:"食べても — Even if I eat",level:"N4",favorite:false,notes:"",groups:[]},
+  {id:5,pattern:"〜ながら",romaji:"~nagara",meaning:"While doing two simultaneous actions",example:"音楽を聴きながら — While listening to music",level:"N4",favorite:false,notes:"",groups:[]},
+  {id:6,pattern:"〜はずだ",romaji:"~hazu da",meaning:"Should be / expected to be",example:"来るはずだ — He should come",level:"N3",favorite:false,notes:"",groups:[]},
+];
+
+const DEFAULT_SETTINGS = {
+  vocab_showHiragana:true,vocab_showRomaji:true,vocab_showType:true,
+  grammar_showRomaji:true,grammar_showExample:true,grammar_showLevel:true,
+};
+
+const TYPE_COLORS = {
+  verb:{bg:"#E6F1FB",color:"#0C447C",border:"#85B7EB"},
+  noun:{bg:"#EAF3DE",color:"#27500A",border:"#97C459"},
+  adjective:{bg:"#FAEEDA",color:"#633806",border:"#EF9F27"},
+  adverb:{bg:"#FBEAF0",color:"#72243E",border:"#ED93B1"},
+  other:{bg:"#F1EFE8",color:"#444441",border:"#B4B2A9"},
+};
+const VERB_GROUP_COLORS = {
+  1:{bg:"#EDE8FB",color:"#4A2D9C",border:"#9B82E8"},
+  2:{bg:"#E8F5FB",color:"#0C5C7C",border:"#5BB3D8"},
+  3:{bg:"#FBE8F0",color:"#7C0C3A",border:"#E882AD"},
+};
+const LEVEL_COLORS = {
+  N5:{bg:"#EAF3DE",color:"#27500A"},N4:{bg:"#E6F1FB",color:"#0C447C"},
+  N3:{bg:"#FAEEDA",color:"#633806"},N2:{bg:"#FAECE7",color:"#712B13"},
+  N1:{bg:"#FCEBEB",color:"#791F1F"},
+};
+
+function loadLS(k,d){try{const s=localStorage.getItem(k);return s?JSON.parse(s):d;}catch{return d;}}
+function saveLS(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+function swapItems(arr,id,dir){const n=arr.map(x=>({...x}));const i=n.findIndex(x=>x.id===id);const t=i+dir;if(i===-1||t<0||t>=n.length)return arr;[n[i],n[t]]=[n[t],n[i]];return n;}
+function buildLessonGroups(){return Array.from({length:50},(_,i)=>({id:2000+i+1,name:"Lesson "+(i+1),color:GROUP_PALETTE[i%GROUP_PALETTE.length]}));}
+function assignLessonGroups(vocab,groups){const bl={};groups.forEach(g=>{const m=g.name.match(/^Lesson (\d+)$/);if(m)bl[parseInt(m[1])]=g.id;});const ig={};Object.entries(LESSON_VOCAB_MAP).forEach(([l,ids])=>{const gid=bl[parseInt(l)];if(gid)ids.forEach(id=>{ig[id]=gid;});});return vocab.map(w=>({...w,groups:ig[w.id]?[ig[w.id]]:(w.groups||[])}));}
+
+function getApiKey(){return loadLS("jp_apikey","");}
+
+async function callAPI(prompt,maxTokens){
+  const key=getApiKey();
+  const headers={"Content-Type":"application/json"};
+  if(key)headers["x-api-key"]=key;
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",headers,
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:maxTokens,messages:[{role:"user",content:prompt}]}),
+  });
+  const data=await res.json();
+  if(data.error)throw new Error(JSON.stringify(data.error));
+  return data.content.find(b=>b.type==="text")?.text||"";
+}
+function extractJSON(t){const s=t.indexOf("["),e=t.lastIndexOf("]");if(s===-1||e===-1)throw new Error("No JSON array");return JSON.parse(t.slice(s,e+1));}
+function extractJSONObj(t){return JSON.parse(t.replace(/```json|```/g,"").trim());}
+
+function Badge({label,style}){return <span style={{fontSize:11,fontWeight:500,padding:"2px 8px",borderRadius:20,...style}}>{label}</span>;}
+function StarBtn({active,onClick}){return <button onClick={onClick} style={{background:"none",border:"none",cursor:"pointer",padding:"2px 4px",fontSize:18,color:active?"#EF9F27":"#B4B2A9",lineHeight:1}}>{active?"★":"☆"}</button>;}
+function MoveBtn({dir,disabled,onClick}){return <button onClick={onClick} disabled={disabled} style={{background:"none",border:"0.5px solid #e8e8e5",borderRadius:4,cursor:disabled?"default":"pointer",color:disabled?"#D3D1C7":"#6b6b6b",fontSize:12,padding:"2px 6px",lineHeight:1}}>{dir==="up"?"▲":"▼"}</button>;}
+function GroupPill({name,color,onRemove}){return <span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,fontWeight:500,padding:"2px 8px",borderRadius:20,background:color+"22",color,border:"0.5px solid "+color+"66"}}>{name}{onRemove&&<span onClick={onRemove} style={{cursor:"pointer",fontSize:13,lineHeight:1,opacity:0.7}}>×</span>}</span>;}
+function GroupSelector({itemGroups,allGroups,onToggle}){
+  if(!allGroups.length)return <span style={{fontSize:12,color:"#B4B2A9",fontStyle:"italic"}}>No groups yet — create one in Settings</span>;
+  return <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{allGroups.map(g=>{const a=(itemGroups||[]).includes(g.id);return <span key={g.id} onClick={()=>onToggle(g.id)} style={{cursor:"pointer",fontSize:12,fontWeight:500,padding:"3px 10px",borderRadius:20,background:a?g.color+"22":"#f5f5f3",color:a?g.color:"#6b6b6b",border:"0.5px solid "+(a?g.color:"#d1d1ce"),userSelect:"none"}}>{g.name}</span>;})}</div>;
+}
+function highlightText(text,part){
+  if(!part||!text||!text.includes(part))return <span>{text}</span>;
+  const i=text.indexOf(part);
+  return <span>{text.slice(0,i)}<mark style={{background:"#FAEEDA",color:"#633806",borderRadius:3,padding:"0 2px",fontWeight:500}}>{part}</mark>{text.slice(i+part.length)}</span>;
+}
+function FuriganaLine({furigana,highlightJp}){
+  if(!furigana||!Array.isArray(furigana))return null;
+  const full=furigana.map(p=>p.kanji).join("");
+  const hlS=highlightJp?full.indexOf(highlightJp):-1;
+  const hlE=hlS>=0?hlS+highlightJp.length:-1;
+  let pos=0;
+  return <span style={{display:"inline-flex",flexWrap:"wrap",alignItems:"flex-end",gap:"1px",lineHeight:1.8}}>{furigana.map((p,i)=>{const s=pos,e=pos+p.kanji.length;pos=e;const hl=hlS>=0&&s<hlE&&e>hlS;return <ruby key={i} style={hl?{background:"#FAEEDA",borderRadius:3,padding:"0 2px"}:{}}><span style={{fontSize:15,fontWeight:500,color:hl?"#633806":"#1a1a1a"}}>{p.kanji}</span>{p.reading&&<rt style={{fontSize:10,color:hl?"#633806":"#6b6b6b",textAlign:"center"}}>{p.reading}</rt>}</ruby>;})}</span>;
+}
+
+function ConjugationTable({word}){
+  const [result,setResult]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const load=async()=>{
+    setLoading(true);setResult(null);
+    try{const t=await callAPI("Conjugations for Japanese verb \""+word.japanese+"\" ("+word.romaji+", "+word.meaning+"). ONLY a JSON array, no markdown. Each: {\"form\":\"...\",\"japanese\":\"...\",\"romaji\":\"...\",\"meaning\":\"...\"}. Include: dictionary, polite present, negative plain, negative polite, past plain, past polite, te-form, potential, volitional.",1000);setResult(extractJSONObj(t));}
+    catch{setResult("error");}
+    setLoading(false);
+  };
+  return <div style={{marginTop:12}}>
+    {!result&&!loading&&<button onClick={load} style={{fontSize:13,padding:"5px 14px",borderRadius:6,border:"0.5px solid #d1d1ce",background:"#f5f5f3",cursor:"pointer",color:"#1a1a1a"}}>Show conjugations ↗</button>}
+    {loading&&<p style={{fontSize:13,color:"#6b6b6b"}}>Loading…</p>}
+    {result==="error"&&<p style={{fontSize:13,color:"#A32D2D"}}>Failed. Try again.</p>}
+    {Array.isArray(result)&&<table style={{width:"100%",fontSize:13,borderCollapse:"collapse",marginTop:8}}>
+      <thead><tr style={{borderBottom:"0.5px solid #e8e8e5"}}>{["Form","Japanese","Romaji","Meaning"].map(h=><th key={h} style={{textAlign:"left",padding:"4px 8px",fontWeight:500,color:"#6b6b6b",fontSize:12}}>{h}</th>)}</tr></thead>
+      <tbody>{result.map((r,i)=><tr key={i} style={{borderBottom:"0.5px solid #e8e8e5"}}><td style={{padding:"5px 8px",color:"#6b6b6b",fontSize:12}}>{r.form}</td><td style={{padding:"5px 8px",fontWeight:500}}>{r.japanese}</td><td style={{padding:"5px 8px",color:"#6b6b6b"}}>{r.romaji}</td><td style={{padding:"5px 8px",color:"#6b6b6b"}}>{r.meaning}</td></tr>)}</tbody>
+    </table>}
+  </div>;
+}
+
+function VocabCard({word,onToggleFav,onDelete,onUpdateGroups,reorderMode,onMoveUp,onMoveDown,isFirst,isLast,settings,vocabGroups}){
+  const [expanded,setExpanded]=useState(false);
+  const [showGroups,setShowGroups]=useState(false);
+  const tc=TYPE_COLORS[word.type]||TYPE_COLORS.other;
+  const vc=word.verbGroup?VERB_GROUP_COLORS[word.verbGroup]:null;
+  const assigned=(vocabGroups||[]).filter(g=>(word.groups||[]).includes(g.id));
+  return <div style={{background:"#fff"}}>
+    <div style={{padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start"}}>
+      {reorderMode&&<div style={{display:"flex",flexDirection:"column",gap:4,paddingTop:4,flexShrink:0}}><MoveBtn dir="up" disabled={isFirst} onClick={onMoveUp}/><MoveBtn dir="down" disabled={isLast} onClick={onMoveDown}/></div>}
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:6}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <span style={{fontSize:22,fontWeight:500}}>{word.japanese}</span>
+            {settings.vocab_showHiragana&&<span style={{fontSize:14,color:"#6b6b6b"}}>{word.hiragana}</span>}
+            {settings.vocab_showType&&<Badge label={word.type} style={{background:tc.bg,color:tc.color,border:"0.5px solid "+tc.border}}/>}
+            {word.type==="verb"&&vc&&<Badge label={"Group "+word.verbGroup} style={{background:vc.bg,color:vc.color,border:"0.5px solid "+vc.border}}/>}
+            {assigned.map(g=><GroupPill key={g.id} name={g.name} color={g.color}/>)}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <StarBtn active={word.favorite} onClick={()=>onToggleFav(word.id)}/>
+            <button onClick={()=>setShowGroups(s=>!s)} style={{fontSize:12,padding:"3px 10px",borderRadius:6,border:"0.5px solid #d1d1ce",background:showGroups?"#f5f5f3":"none",cursor:"pointer",color:"#6b6b6b"}}>⊞</button>
+            {word.type==="verb"&&<button onClick={()=>setExpanded(e=>!e)} style={{fontSize:12,padding:"3px 10px",borderRadius:6,border:"0.5px solid #d1d1ce",background:"none",cursor:"pointer",color:"#6b6b6b"}}>{expanded?"hide":"conjugate"}</button>}
+            {onDelete&&<button onClick={()=>onDelete(word.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#B4B2A9",fontSize:16,padding:"2px 4px"}}>✕</button>}
+          </div>
+        </div>
+        <div style={{marginTop:6}}>
+          <span style={{fontSize:15}}>{word.meaning}</span>
+          {settings.vocab_showRomaji&&<span style={{fontSize:13,color:"#6b6b6b",marginLeft:10}}>{word.romaji}</span>}
+        </div>
+        {showGroups&&<div style={{marginTop:10,padding:"10px 12px",background:"#f5f5f3",borderRadius:8}}>
+          <p style={{margin:"0 0 8px",fontSize:12,color:"#6b6b6b",fontWeight:500}}>Assign to groups</p>
+          <GroupSelector itemGroups={word.groups||[]} allGroups={vocabGroups||[]} onToggle={gid=>onUpdateGroups(word.id,gid)}/>
+        </div>}
+      </div>
+    </div>
+    {expanded&&<div style={{borderTop:"1px solid #D3D1C7",padding:"12px 16px"}}><ConjugationTable word={word}/></div>}
+  </div>;
+}
+
+function GrammarCard({item,onToggleFav,onDelete,onUpdateNotes,onUpdateGroups,reorderMode,onMoveUp,onMoveDown,isFirst,isLast,settings,grammarGroups,showNotes}){
+  const [editingNote,setEditingNote]=useState(false);
+  const [noteVal,setNoteVal]=useState(item.notes||"");
+  const [examples,setExamples]=useState(null);
+  const [loadingEx,setLoadingEx]=useState(false);
+  const [exError,setExError]=useState("");
+  const [showGroupPicker,setShowGroupPicker]=useState(false);
+  const lc=LEVEL_COLORS[item.level]||LEVEL_COLORS.N5;
+  const assigned=(grammarGroups||[]).filter(g=>(item.groups||[]).includes(g.id));
+  const saveNote=()=>{onUpdateNotes(item.id,noteVal);setEditingNote(false);};
+  const loadExamples=async()=>{
+    if(examples){setExamples(null);return;}
+    setLoadingEx(true);setExError("");
+    try{
+      const p="Give me 3 simple example sentences using the Japanese grammar pattern \""+item.pattern+"\" ("+item.meaning+"). Return ONLY a raw JSON array, no markdown, no fences. Each: {\"japanese\":\"...\",\"furigana\":[...],\"romaji\":\"...\",\"english\":\"...\",\"highlight_jp\":\"...\",\"highlight_ro\":\"...\"}. furigana: array of {\"kanji\":\"...\",\"reading\":\"...\"}, reading null for kana-only. Keep sentences very short.";
+      const t=await callAPI(p,1000);
+      setExamples(extractJSON(t));
+    }catch(e){setExError(String(e));setExamples("error");}
+    setLoadingEx(false);
+  };
+  return <div style={{background:"#fff"}}>
+    <div style={{padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start"}}>
+      {reorderMode&&<div style={{display:"flex",flexDirection:"column",gap:4,paddingTop:4,flexShrink:0}}><MoveBtn dir="up" disabled={isFirst} onClick={onMoveUp}/><MoveBtn dir="down" disabled={isLast} onClick={onMoveDown}/></div>}
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
+          <div style={{flex:1}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <span style={{fontSize:20,fontWeight:500}}>{item.pattern}</span>
+              {settings.grammar_showRomaji&&<span style={{fontSize:14,color:"#6b6b6b"}}>{item.romaji}</span>}
+              {settings.grammar_showLevel&&<Badge label={item.level} style={{background:lc.bg,color:lc.color}}/>}
+              {assigned.map(g=><GroupPill key={g.id} name={g.name} color={g.color}/>)}
+            </div>
+            <p style={{margin:"6px 0 4px",fontSize:15}}>{item.meaning}</p>
+            {settings.grammar_showExample&&<p style={{margin:0,fontSize:13,color:"#6b6b6b",fontStyle:"italic"}}>{item.example}</p>}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+            <StarBtn active={item.favorite} onClick={()=>onToggleFav(item.id)}/>
+            <button onClick={()=>setShowGroupPicker(s=>!s)} style={{fontSize:12,padding:"3px 10px",borderRadius:6,border:"0.5px solid #d1d1ce",background:showGroupPicker?"#f5f5f3":"none",cursor:"pointer",color:"#6b6b6b"}}>⊞</button>
+            <button onClick={loadExamples} disabled={loadingEx} style={{fontSize:12,padding:"3px 10px",borderRadius:6,border:"0.5px solid #d1d1ce",background:Array.isArray(examples)?"#f5f5f3":"none",cursor:loadingEx?"default":"pointer",color:"#6b6b6b",whiteSpace:"nowrap"}}>{loadingEx?"Loading…":Array.isArray(examples)?"hide":"examples ↗"}</button>
+            {onDelete&&<button onClick={()=>onDelete(item.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#B4B2A9",fontSize:16,padding:"2px 4px"}}>✕</button>}
+          </div>
+        </div>
+        {showGroupPicker&&<div style={{marginTop:10,padding:"10px 12px",background:"#f5f5f3",borderRadius:8}}>
+          <p style={{margin:"0 0 8px",fontSize:12,color:"#6b6b6b",fontWeight:500}}>Assign to groups</p>
+          <GroupSelector itemGroups={item.groups||[]} allGroups={grammarGroups||[]} onToggle={gid=>onUpdateGroups(item.id,gid)}/>
+        </div>}
+        {examples==="error"&&<div style={{marginTop:10,borderTop:"1px solid #D3D1C7",paddingTop:10}}>
+          <p style={{fontSize:13,color:"#A32D2D",margin:0}}>Failed to load examples.</p>
+          {exError&&<p style={{fontSize:11,color:"#A32D2D",margin:"4px 0 0",wordBreak:"break-all"}}>{exError}</p>}
+        </div>}
+        {Array.isArray(examples)&&<div style={{marginTop:10,borderTop:"1px solid #D3D1C7",paddingTop:10}}>
+          <p style={{fontSize:12,fontWeight:500,color:"#6b6b6b",margin:"0 0 10px"}}>Examples</p>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {examples.map((ex,i)=><div key={i} style={{background:"#f5f5f3",borderRadius:8,padding:"10px 12px"}}>
+              <div style={{marginBottom:4}}><FuriganaLine furigana={ex.furigana} highlightJp={ex.highlight_jp}/></div>
+              {settings.grammar_showRomaji&&<p style={{margin:"0 0 2px",fontSize:13,color:"#6b6b6b"}}>{highlightText(ex.romaji,ex.highlight_ro)}</p>}
+              <p style={{margin:0,fontSize:13,color:"#6b6b6b",fontStyle:"italic"}}>{ex.english}</p>
+            </div>)}
+          </div>
+        </div>}
+        {showNotes&&<div style={{marginTop:10,borderTop:"1px solid #D3D1C7",paddingTop:10}}>
+          {!editingNote?<div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+            {item.notes?<p style={{margin:0,fontSize:13,color:"#6b6b6b",flex:1,background:"#f5f5f3",borderRadius:6,padding:"6px 10px"}}>📝 {item.notes}</p>:<span style={{fontSize:13,color:"#B4B2A9",fontStyle:"italic",flex:1}}>No notes yet</span>}
+            <button onClick={()=>{setNoteVal(item.notes||"");setEditingNote(true);}} style={{fontSize:12,padding:"3px 10px",borderRadius:6,border:"0.5px solid #d1d1ce",background:"none",cursor:"pointer",color:"#6b6b6b",whiteSpace:"nowrap"}}>{item.notes?"edit note":"+ add note"}</button>
+          </div>:<div>
+            <textarea autoFocus value={noteVal} onChange={e=>setNoteVal(e.target.value)} placeholder="e.g. covered in week 3 of intermediate 1 course" style={{width:"100%",boxSizing:"border-box",padding:"8px 10px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",fontSize:13,color:"#1a1a1a",resize:"vertical",minHeight:60,fontFamily:"inherit"}}/>
+            <div style={{display:"flex",gap:8,marginTop:6}}>
+              <button onClick={saveNote} style={{fontSize:13,padding:"4px 14px",borderRadius:6,border:"0.5px solid #d1d1ce",background:"#f5f5f3",cursor:"pointer",fontWeight:500,color:"#1a1a1a"}}>Save</button>
+              <button onClick={()=>setEditingNote(false)} style={{fontSize:13,padding:"4px 14px",borderRadius:6,border:"none",background:"none",cursor:"pointer",color:"#6b6b6b"}}>Cancel</button>
+            </div>
+          </div>}
+        </div>}
+      </div>
+    </div>
+  </div>;
+}
+
+function StudyTab({vocab,vocabGroups}){
+  const [phase,setPhase]=useState("setup");
+  const [groupFilter,setGroupFilter]=useState("all");
+  const [sourceFilter,setSourceFilter]=useState("all");
+  const [direction,setDirection]=useState("jp-en");
+  const [deck,setDeck]=useState([]);
+  const [index,setIndex]=useState(0);
+  const [flipped,setFlipped]=useState(false);
+  const [got,setGot]=useState([]);
+  const [retry,setRetry]=useState([]);
+  const [isRetryRound,setIsRetryRound]=useState(false);
+  const sel={padding:"8px 10px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",fontSize:14,color:"#1a1a1a",width:"100%"};
+  const lbl={fontSize:13,color:"#6b6b6b",marginBottom:6,display:"block"};
+  const buildDeck=()=>{
+    let pool=[...vocab];
+    if(sourceFilter==="favorites")pool=pool.filter(w=>w.favorite);
+    if(groupFilter!=="all")pool=pool.filter(w=>(w.groups||[]).includes(Number(groupFilter)));
+    const s=pool.sort(()=>Math.random()-0.5);
+    setDeck(s);setIndex(0);setFlipped(false);setGot([]);setRetry([]);setIsRetryRound(false);
+    setPhase(s.length===0?"empty":"study");
+  };
+  const advance=(ng,nr,cd,ci)=>{
+    if(ci+1<cd.length){setIndex(ci+1);setFlipped(false);}
+    else if(nr.length>0){const nd=[...nr].sort(()=>Math.random()-0.5);setDeck(nd);setRetry([]);setIndex(0);setFlipped(false);setIsRetryRound(true);}
+    else{setGot(ng);setPhase("results");}
+  };
+  const handleGot=()=>{const ng=[...got,deck[index]];setGot(ng);advance(ng,retry,deck,index);};
+  const handleRetry=()=>{const nr=[...retry,deck[index]];setRetry(nr);advance(got,nr,deck,index);};
+  if(phase==="setup")return <div>
+    <p style={{fontSize:15,color:"#6b6b6b",marginTop:0,marginBottom:24}}>Configure your flashcard session.</p>
+    <div style={{display:"flex",flexDirection:"column",gap:16,maxWidth:400}}>
+      <div><label style={lbl}>Card set</label><select style={sel} value={sourceFilter} onChange={e=>setSourceFilter(e.target.value)}><option value="all">All vocabulary</option><option value="favorites">Favorites only</option></select></div>
+      <div><label style={lbl}>Group</label><select style={sel} value={groupFilter} onChange={e=>setGroupFilter(e.target.value)}><option value="all">All groups</option>{vocabGroups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></div>
+      <div><label style={lbl}>Direction</label><select style={sel} value={direction} onChange={e=>setDirection(e.target.value)}><option value="jp-en">Japanese → English</option><option value="en-jp">English → Japanese</option></select></div>
+      <button onClick={buildDeck} style={{padding:"12px",borderRadius:10,border:"none",background:"#1D9E75",cursor:"pointer",fontWeight:600,fontSize:15,color:"#fff",marginTop:8}}>Start studying →</button>
+    </div>
+  </div>;
+  if(phase==="empty")return <div style={{textAlign:"center",paddingTop:40}}><p style={{fontSize:15,color:"#6b6b6b"}}>No vocabulary found for this selection.</p><button onClick={()=>setPhase("setup")} style={{marginTop:12,padding:"8px 20px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"none",cursor:"pointer",fontSize:14}}>Back to settings</button></div>;
+  if(phase==="results")return <div style={{textAlign:"center",paddingTop:20}}>
+    <div style={{fontSize:48,marginBottom:12}}>🎉</div>
+    <h2 style={{fontSize:22,fontWeight:600,margin:"0 0 8px"}}>Session complete!</h2>
+    <p style={{fontSize:15,color:"#6b6b6b",margin:"0 0 28px"}}>You got through all <strong>{got.length}</strong> cards!</p>
+    <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+      <button onClick={buildDeck} style={{padding:"10px 22px",borderRadius:8,border:"none",background:"#1D9E75",cursor:"pointer",fontWeight:600,fontSize:14,color:"#fff"}}>Study again</button>
+      <button onClick={()=>setPhase("setup")} style={{padding:"10px 22px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"none",cursor:"pointer",fontSize:14}}>Change settings</button>
+    </div>
+  </div>;
+  const card=deck[index];
+  const tc=card?(TYPE_COLORS[card.type]||TYPE_COLORS.other):null;
+  const vc=card&&card.verbGroup?VERB_GROUP_COLORS[card.verbGroup]:null;
+  const progress=deck.length>0?(index/deck.length)*100:0;
+  return <div>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+      <button onClick={()=>setPhase("setup")} style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:"#6b6b6b",padding:0}}>← Back</button>
+      <span style={{fontSize:13,color:"#6b6b6b"}}>{isRetryRound&&<span style={{color:"#D85A30",fontWeight:500,marginRight:6}}>Retry round</span>}{index+1} / {deck.length}</span>
+      <span style={{fontSize:13,color:"#1D9E75",fontWeight:500}}>✓ {got.length}</span>
+    </div>
+    <div style={{height:4,background:"#f5f5f3",borderRadius:2,marginBottom:24,overflow:"hidden"}}><div style={{height:"100%",width:progress+"%",background:"#1D9E75",borderRadius:2,transition:"width 0.3s"}}/></div>
+    <div onClick={()=>setFlipped(f=>!f)} style={{cursor:"pointer",background:"#fff",border:"0.5px solid #e8e8e5",borderRadius:16,minHeight:220,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"32px 24px",marginBottom:20,textAlign:"center",userSelect:"none"}}>
+      {!flipped?<div>
+        {direction==="jp-en"?<div><p style={{fontSize:42,fontWeight:600,margin:"0 0 8px"}}>{card.japanese}</p><p style={{fontSize:16,color:"#6b6b6b",margin:0}}>{card.hiragana}</p></div>:<p style={{fontSize:26,fontWeight:500,margin:0}}>{card.meaning}</p>}
+        <p style={{fontSize:12,color:"#B4B2A9",marginTop:24,marginBottom:0}}>Tap to reveal</p>
+      </div>:<div style={{width:"100%"}}>
+        {direction==="jp-en"?<div><p style={{fontSize:28,fontWeight:600,margin:"0 0 6px"}}>{card.meaning}</p><p style={{fontSize:14,color:"#6b6b6b",margin:"0 0 12px"}}>{card.romaji}</p></div>:<div><p style={{fontSize:42,fontWeight:600,margin:"0 0 8px"}}>{card.japanese}</p><p style={{fontSize:16,color:"#6b6b6b",margin:"0 0 4px"}}>{card.hiragana}</p><p style={{fontSize:14,color:"#6b6b6b",margin:"0 0 12px"}}>{card.romaji}</p></div>}
+        <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap",marginTop:8}}>
+          {tc&&<Badge label={card.type} style={{background:tc.bg,color:tc.color,border:"0.5px solid "+tc.border}}/>}
+          {vc&&<Badge label={"Group "+card.verbGroup} style={{background:vc.bg,color:vc.color,border:"0.5px solid "+vc.border}}/>}
+        </div>
+      </div>}
+    </div>
+    {flipped&&<div style={{display:"flex",gap:12}}>
+      <button onClick={handleRetry} style={{flex:1,padding:"14px",borderRadius:10,border:"0.5px solid #E24B4A",background:"#FDF0F0",cursor:"pointer",fontWeight:600,fontSize:15,color:"#E24B4A"}}>✗ Try again</button>
+      <button onClick={handleGot} style={{flex:1,padding:"14px",borderRadius:10,border:"none",background:"#1D9E75",cursor:"pointer",fontWeight:600,fontSize:15,color:"#fff"}}>✓ Got it</button>
+    </div>}
+  </div>;
+}
+
+function AddForm({onAddVocab,onAddGrammar,vocabGroups,grammarGroups}){
+  const [tab,setTab]=useState("vocab");
+  const [v,setV]=useState({japanese:"",hiragana:"",romaji:"",meaning:"",type:"noun",verbGroup:null,groups:[]});
+  const [g,setG]=useState({pattern:"",romaji:"",meaning:"",example:"",level:"N5",notes:"",groups:[]});
+  const [msg,setMsg]=useState("");
+  const [autofilling,setAutofilling]=useState(false);
+  const inp={padding:"8px 10px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",fontSize:14,color:"#1a1a1a",width:"100%",boxSizing:"border-box"};
+  const lbl={fontSize:13,color:"#6b6b6b",marginBottom:4,display:"block"};
+  const flash=m=>{setMsg(m);setTimeout(()=>setMsg(""),3000);};
+  const autofill=async()=>{
+    if(!v.japanese.trim())return flash("Enter a Japanese word first.");
+    setAutofilling(true);
+    try{const p="Is \""+v.japanese+"\" a valid Japanese word? If yes, return ONLY a JSON object: {\"valid\":true,\"japanese\":\"...\",\"hiragana\":\"...\",\"romaji\":\"...\",\"meaning\":\"...\",\"type\":\"verb|noun|adjective|adverb|other\",\"verbGroup\":1|2|3|null}. japanese must be standard kanji form. verbGroup: 1=Godan,2=Ichidan,3=Irregular,null if not verb. If not valid: {\"valid\":false}. No markdown.";const t=await callAPI(p,300);const r=extractJSONObj(t);
+    if(!r.valid)flash('"'+v.japanese+'" was not recognised.');
+    else{setV(p=>({...p,japanese:r.japanese||p.japanese,hiragana:r.hiragana||p.hiragana,romaji:r.romaji||p.romaji,meaning:r.meaning||p.meaning,type:r.type||p.type,verbGroup:r.verbGroup??p.verbGroup}));flash("Fields filled in — check and adjust if needed.");}}
+    catch{flash("Autofill failed. Try again.");}
+    setAutofilling(false);
+  };
+  const tVG=gid=>setV(p=>({...p,groups:p.groups.includes(gid)?p.groups.filter(x=>x!==gid):[...p.groups,gid]}));
+  const tGG=gid=>setG(p=>({...p,groups:p.groups.includes(gid)?p.groups.filter(x=>x!==gid):[...p.groups,gid]}));
+  const subV=()=>{if(!v.japanese||!v.meaning)return flash("Japanese and meaning required.");onAddVocab({...v,id:Date.now(),favorite:false});setV({japanese:"",hiragana:"",romaji:"",meaning:"",type:"noun",verbGroup:null,groups:[]});flash("Word added!");};
+  const subG=()=>{if(!g.pattern||!g.meaning)return flash("Pattern and meaning required.");onAddGrammar({...g,id:Date.now(),favorite:false});setG({pattern:"",romaji:"",meaning:"",example:"",level:"N5",notes:"",groups:[]});flash("Grammar added!");};
+  return <div>
+    <div style={{display:"flex",gap:8,marginBottom:20}}>{["vocab","grammar"].map(t=><button key={t} onClick={()=>setTab(t)} style={{padding:"7px 18px",borderRadius:8,border:"0.5px solid #d1d1ce",background:tab===t?"#f5f5f3":"none",cursor:"pointer",fontWeight:tab===t?500:400,color:"#1a1a1a",fontSize:14}}>{t==="vocab"?"Add vocabulary":"Add grammar"}</button>)}</div>
+    {tab==="vocab"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+      <div style={{gridColumn:"1/-1"}}><label style={lbl}>Japanese (kanji/kana)</label><div style={{display:"flex",gap:8}}><input style={{...inp,flex:1}} value={v.japanese} onChange={e=>setV(p=>({...p,japanese:e.target.value}))} placeholder="e.g. 食べる"/><button onClick={autofill} disabled={autofilling} style={{padding:"8px 16px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",cursor:autofilling?"default":"pointer",fontSize:13,fontWeight:500,whiteSpace:"nowrap"}}>{autofilling?"Filling…":"Autofill ↗"}</button></div></div>
+      {[["hiragana","Hiragana"],["romaji","Romaji"],["meaning","English meaning"]].map(([k,l])=><div key={k}><label style={lbl}>{l}</label><input style={inp} value={v[k]} onChange={e=>setV(p=>({...p,[k]:e.target.value}))} placeholder={l}/></div>)}
+      <div><label style={lbl}>Type</label><select style={inp} value={v.type} onChange={e=>setV(p=>({...p,type:e.target.value,verbGroup:e.target.value!=="verb"?null:p.verbGroup}))}>{["verb","noun","adjective","adverb","other"].map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+      {v.type==="verb"&&<div><label style={lbl}>Verb group</label><select style={inp} value={v.verbGroup??""} onChange={e=>setV(p=>({...p,verbGroup:e.target.value?Number(e.target.value):null}))}><option value="">Unknown</option><option value="1">Group 1 — Godan</option><option value="2">Group 2 — Ichidan</option><option value="3">Group 3 — Irregular</option></select></div>}
+      <div style={{gridColumn:"1/-1"}}><label style={lbl}>Groups (optional)</label>{vocabGroups.length===0?<p style={{fontSize:13,color:"#B4B2A9",fontStyle:"italic",margin:0}}>No groups yet</p>:<div style={{display:"flex",flexWrap:"wrap",gap:6}}>{vocabGroups.map(gr=>{const a=v.groups.includes(gr.id);return <span key={gr.id} onClick={()=>tVG(gr.id)} style={{cursor:"pointer",fontSize:12,fontWeight:500,padding:"3px 10px",borderRadius:20,background:a?gr.color+"22":"#f5f5f3",color:a?gr.color:"#6b6b6b",border:"0.5px solid "+(a?gr.color:"#d1d1ce"),userSelect:"none"}}>{gr.name}</span>;})}</div>}</div>
+      <div style={{gridColumn:"1/-1",display:"flex",justifyContent:"flex-end"}}><button onClick={subV} style={{padding:"9px 24px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",cursor:"pointer",fontWeight:500,fontSize:14}}>Add word</button></div>
+    </div>}
+    {tab==="grammar"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+      {[["pattern","Pattern (e.g. 〜たい)"],["romaji","Romaji"],["meaning","Meaning"],["example","Example sentence"]].map(([k,l])=><div key={k}><label style={lbl}>{l}</label><input style={inp} value={g[k]} onChange={e=>setG(p=>({...p,[k]:e.target.value}))} placeholder={l}/></div>)}
+      <div><label style={lbl}>JLPT level</label><select style={inp} value={g.level} onChange={e=>setG(p=>({...p,level:e.target.value}))}>{["N5","N4","N3","N2","N1"].map(l=><option key={l} value={l}>{l}</option>)}</select></div>
+      <div><label style={lbl}>Notes (optional)</label><input style={inp} value={g.notes} onChange={e=>setG(p=>({...p,notes:e.target.value}))} placeholder="e.g. covered in week 3"/></div>
+      <div style={{gridColumn:"1/-1"}}><label style={lbl}>Groups (optional)</label>{grammarGroups.length===0?<p style={{fontSize:13,color:"#B4B2A9",fontStyle:"italic",margin:0}}>No groups yet</p>:<div style={{display:"flex",flexWrap:"wrap",gap:6}}>{grammarGroups.map(gr=>{const a=g.groups.includes(gr.id);return <span key={gr.id} onClick={()=>tGG(gr.id)} style={{cursor:"pointer",fontSize:12,fontWeight:500,padding:"3px 10px",borderRadius:20,background:a?gr.color+"22":"#f5f5f3",color:a?gr.color:"#6b6b6b",border:"0.5px solid "+(a?gr.color:"#d1d1ce"),userSelect:"none"}}>{gr.name}</span>;})}</div>}</div>
+      <div style={{gridColumn:"1/-1",display:"flex",justifyContent:"flex-end"}}><button onClick={subG} style={{padding:"9px 24px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",cursor:"pointer",fontWeight:500,fontSize:14}}>Add grammar</button></div>
+    </div>}
+    {msg&&<p style={{marginTop:12,fontSize:14,color:msg.includes("required")||msg.includes("recognised")||msg.includes("failed")?"#A32D2D":"#3B6D11"}}>{msg}</p>}
+  </div>;
+}
+
+function GroupManager({title,groups,onAdd,onDelete}){
+  const [name,setName]=useState("");
+  const nc=GROUP_PALETTE.find(c=>!groups.map(g=>g.color).includes(c))||GROUP_PALETTE[groups.length%GROUP_PALETTE.length];
+  const sub=()=>{if(!name.trim())return;onAdd({id:Date.now(),name:name.trim(),color:nc});setName("");};
+  return <div style={{marginBottom:8}}>
+    <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:10}}>{groups.length===0&&<span style={{fontSize:13,color:"#B4B2A9",fontStyle:"italic"}}>No groups yet</span>}{groups.map(g=><GroupPill key={g.id} name={g.name} color={g.color} onRemove={()=>onDelete(g.id)}/>)}</div>
+    <div style={{display:"flex",gap:8}}><input value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sub()} placeholder={"New "+title.toLowerCase()+" group…"} style={{flex:1,padding:"8px 10px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",fontSize:14,color:"#1a1a1a"}}/><button onClick={sub} style={{padding:"8px 16px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",cursor:"pointer",fontWeight:500,fontSize:14}}>Add</button></div>
+  </div>;
+}
+
+function CreateLessonGroupsBtn({vocab,vocabGroups,onUpdateVocab,onUpdateVocabGroups}){
+  const [status,setStatus]=useState("");
+  const create=()=>{
+    const ex=vocabGroups.map(g=>g.name);
+    const ng=buildLessonGroups().filter(g=>!ex.includes(g.name));
+    const all=[...vocabGroups,...ng];
+    onUpdateVocabGroups(all);onUpdateVocab(assignLessonGroups(vocab,all));
+    setStatus("Created "+ng.length+" lesson group(s) and assigned vocabulary!");
+    setTimeout(()=>setStatus(""),4000);
+  };
+  return <div><button onClick={create} style={{padding:"8px 16px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",cursor:"pointer",fontSize:13,fontWeight:500}}>Create MNN lesson groups</button>{status&&<p style={{marginTop:8,fontSize:13,color:"#3B6D11"}}>{status}</p>}</div>;
+}
+
+function FixVerbGroupsBtn({vocab,onUpdate}){
+  const [status,setStatus]=useState("");
+  const [loading,setLoading]=useState(false);
+  const fix=async()=>{
+    setLoading(true);setStatus("");
+    const verbs=vocab.filter(w=>w.type==="verb"&&!w.verbGroup);
+    if(!verbs.length){setStatus("All verbs already have a group!");setLoading(false);return;}
+    try{const p="For each verb, return ONLY a JSON array of {\"japanese\":\"...\",\"verbGroup\":1|2|3}. 1=Godan,2=Ichidan,3=Irregular. Verbs: "+verbs.map(v=>v.japanese).join(", ")+". No markdown.";const t=await callAPI(p,500);const r=extractJSON(t);const m={};r.forEach(x=>{m[x.japanese]=x.verbGroup;});onUpdate(vocab.map(w=>w.type==="verb"?{...w,verbGroup:m[w.japanese]??w.verbGroup??null}:w));setStatus("Updated "+r.length+" verb(s)!");}
+    catch(e){setStatus("Failed: "+String(e));}
+    setLoading(false);
+  };
+  return <div><button onClick={fix} disabled={loading} style={{padding:"8px 16px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",cursor:loading?"default":"pointer",fontSize:13,fontWeight:500}}>{loading?"Detecting…":"Detect verb groups"}</button>{status&&<p style={{marginTop:8,fontSize:13,color:status.startsWith("Failed")?"#A32D2D":"#3B6D11"}}>{status}</p>}</div>;
+}
+
+function ResetBtn({onReset}){
+  const [confirm,setConfirm]=useState(false);
+  return <div>{!confirm?<button onClick={()=>setConfirm(true)} style={{padding:"8px 16px",borderRadius:8,border:"0.5px solid #E24B4A",background:"none",cursor:"pointer",fontSize:13,color:"#E24B4A",fontWeight:500}}>Reset to defaults</button>:<div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><p style={{margin:0,fontSize:13,color:"#A32D2D"}}>Are you sure? All data will be lost.</p><button onClick={()=>{onReset();setConfirm(false);}} style={{padding:"6px 14px",borderRadius:8,border:"none",background:"#E24B4A",cursor:"pointer",fontSize:13,color:"#fff",fontWeight:500}}>Yes, reset</button><button onClick={()=>setConfirm(false)} style={{padding:"6px 14px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"none",cursor:"pointer",fontSize:13}}>Cancel</button></div>}</div>;
+}
+
+function ApiKeyInput(){
+  const [key,setKey]=useState(()=>loadLS("jp_apikey",""));
+  const [saved,setSaved]=useState(false);
+  const save=()=>{saveLS("jp_apikey",key.trim());setSaved(true);setTimeout(()=>setSaved(false),2000);};
+  return <div>
+    <div style={{display:"flex",gap:8}}>
+      <input type="password" value={key} onChange={e=>setKey(e.target.value)} placeholder="sk-ant-…" style={{flex:1,padding:"8px 10px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",fontSize:13,color:"#1a1a1a"}}/>
+      <button onClick={save} style={{padding:"8px 16px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",cursor:"pointer",fontSize:13,fontWeight:500}}>Save</button>
+    </div>
+    {saved&&<p style={{marginTop:6,fontSize:13,color:"#3B6D11"}}>API key saved!</p>}
+    {key&&<p style={{marginTop:6,fontSize:12,color:"#6b6b6b"}}>Key stored locally. AI features are active.</p>}
+    {!key&&<p style={{marginTop:6,fontSize:12,color:"#6b6b6b"}}>Without a key, AI features (autofill, conjugations, examples) won't work. Get a key at <a href="https://console.anthropic.com" target="_blank" style={{color:"#378ADD"}}>console.anthropic.com</a>.</p>}
+  </div>;
+}
+
+function SettingsTab({settings,onChangeSetting,vocabGroups,grammarGroups,onAddVocabGroup,onDeleteVocabGroup,onAddGrammarGroup,onDeleteGrammarGroup,vocab,onUpdateVocab,onUpdateVocabGroups,onReset}){
+  const toggle=(label,key,desc)=><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 0",borderBottom:"1px solid #D3D1C7"}}>
+    <div><p style={{margin:0,fontSize:14}}>{label}</p>{desc&&<p style={{margin:"2px 0 0",fontSize:12,color:"#6b6b6b"}}>{desc}</p>}</div>
+    <button onClick={()=>onChangeSetting(key,!settings[key])} style={{width:44,height:24,borderRadius:12,border:"none",cursor:"pointer",background:settings[key]?"#1D9E75":"#B4B2A9",position:"relative",flexShrink:0}}>
+      <span style={{position:"absolute",top:3,left:settings[key]?22:3,width:18,height:18,borderRadius:"50%",background:"#fff"}}/>
+    </button>
+  </div>;
+  const section=t=><p style={{fontSize:12,fontWeight:500,color:"#6b6b6b",margin:"24px 0 8px",textTransform:"uppercase",letterSpacing:"0.05em"}}>{t}</p>;
+  return <div>
+    {section("API Key")}
+    <div style={{padding:"14px 0",borderBottom:"1px solid #D3D1C7"}}>
+      <p style={{margin:"0 0 6px",fontSize:14}}>Anthropic API Key</p>
+      <p style={{margin:"0 0 10px",fontSize:12,color:"#6b6b6b"}}>Required for AI features (autofill, conjugations, examples) outside of Claude.ai.</p>
+      <ApiKeyInput/>
+    </div>
+    {section("Vocabulary")}
+    {toggle("Show hiragana","vocab_showHiragana","Display hiragana reading")}
+    {toggle("Show romaji","vocab_showRomaji","Display romaji pronunciation")}
+    {toggle("Show word type","vocab_showType","Display noun / verb / adjective badge")}
+    {section("Grammar")}
+    {toggle("Show romaji","grammar_showRomaji","Display romaji for patterns and examples")}
+    {toggle("Show example sentence","grammar_showExample","Show built-in example on each card")}
+    {toggle("Show JLPT level","grammar_showLevel","Display N5 / N4 / N3 etc. badge")}
+    {section("Custom Groups")}
+    <p style={{fontSize:13,fontWeight:500,margin:"12px 0 6px"}}>Vocabulary Custom Groups</p>
+    <GroupManager title="Vocabulary" groups={vocabGroups} onAdd={onAddVocabGroup} onDelete={onDeleteVocabGroup}/>
+    <p style={{fontSize:13,fontWeight:500,margin:"16px 0 6px"}}>Grammar Custom Groups</p>
+    <GroupManager title="Grammar" groups={grammarGroups} onAdd={onAddGrammarGroup} onDelete={onDeleteGrammarGroup}/>
+    {section("Data")}
+    <div style={{padding:"14px 0",borderBottom:"1px solid #D3D1C7"}}>
+      <p style={{margin:"0 0 6px",fontSize:14}}>Create Minna no Nihongo lesson groups</p>
+      <p style={{margin:"0 0 10px",fontSize:12,color:"#6b6b6b"}}>Creates Lesson 1–50 groups and assigns all MNN vocabulary.</p>
+      <CreateLessonGroupsBtn vocab={vocab} vocabGroups={vocabGroups} onUpdateVocab={onUpdateVocab} onUpdateVocabGroups={onUpdateVocabGroups}/>
+    </div>
+    <div style={{padding:"14px 0",borderBottom:"1px solid #D3D1C7"}}>
+      <p style={{margin:"0 0 6px",fontSize:14}}>Fix missing verb groups</p>
+      <p style={{margin:"0 0 10px",fontSize:12,color:"#6b6b6b"}}>Re-detect groups for all verbs missing one.</p>
+      <FixVerbGroupsBtn vocab={vocab} onUpdate={onUpdateVocab}/>
+    </div>
+    <div style={{padding:"14px 0",borderBottom:"1px solid #D3D1C7"}}>
+      <p style={{margin:"0 0 6px",fontSize:14}}>Reset app to defaults</p>
+      <p style={{margin:"0 0 10px",fontSize:12,color:"#6b6b6b"}}>Clears all saved data. Cannot be undone.</p>
+      <ResetBtn onReset={onReset}/>
+    </div>
+  </div>;
+}
+
+function App(){
+  const [tab,setTab]=useState("vocab");
+  const [vocab,setVocab]=useState(()=>{const s=loadLS("jp_vocab3",MNN_VOCAB);return s.map(w=>({verbGroup:null,groups:[],...w}));});
+  const [grammar,setGrammar]=useState(()=>{const s=loadLS("jp_grammar3",DEFAULT_GRAMMAR);return s.map(g=>({groups:[],notes:"",...g}));});
+  const [settings,setSettings]=useState(()=>({...DEFAULT_SETTINGS,...loadLS("jp_settings",{})}));
+  const [vocabGroups,setVocabGroups]=useState(()=>loadLS("jp_vocabGroups",[]));
+  const [grammarGroups,setGrammarGroups]=useState(()=>loadLS("jp_grammarGroups",[]));
+  const [search,setSearch]=useState("");
+  const [filterType,setFilterType]=useState("all");
+  const [filterGroup,setFilterGroup]=useState("all");
+  const [reorderMode,setReorderMode]=useState(false);
+  const [showNotes,setShowNotes]=useState(false);
+
+  const sav=(k,v)=>{setVocab(v);saveLS(k,v);};
+  const sag=(k,g)=>{setGrammar(g);saveLS(k,g);};
+  const savV=v=>{setVocab(v);saveLS("jp_vocab3",v);};
+  const savG=g=>{setGrammar(g);saveLS("jp_grammar3",g);};
+  const savVG=vg=>{setVocabGroups(vg);saveLS("jp_vocabGroups",vg);};
+  const savGG=gg=>{setGrammarGroups(gg);saveLS("jp_grammarGroups",gg);};
+  const updSetting=(k,v)=>{const n={...settings,[k]:v};setSettings(n);saveLS("jp_settings",n);};
+
+  const addVG=g=>savVG([...vocabGroups,g]);
+  const delVG=id=>{savVG(vocabGroups.filter(g=>g.id!==id));savV(vocab.map(w=>({...w,groups:(w.groups||[]).filter(gid=>gid!==id)})));};
+  const addGG=g=>savGG([...grammarGroups,g]);
+  const delGG=id=>{savGG(grammarGroups.filter(g=>g.id!==id));savG(grammar.map(g=>({...g,groups:(g.groups||[]).filter(gid=>gid!==id)})));};
+
+  const togVF=id=>savV(vocab.map(w=>w.id===id?{...w,favorite:!w.favorite}:w));
+  const togGF=id=>savG(grammar.map(g=>g.id===id?{...g,favorite:!g.favorite}:g));
+  const delV=id=>savV(vocab.filter(w=>w.id!==id));
+  const delG=id=>savG(grammar.filter(g=>g.id!==id));
+  const addV=w=>savV([...vocab,w]);
+  const addG=g=>savG([...grammar,g]);
+  const updN=(id,notes)=>savG(grammar.map(g=>g.id===id?{...g,notes}:g));
+  const updVG=(id,gid)=>savV(vocab.map(w=>w.id===id?{...w,groups:(w.groups||[]).includes(gid)?w.groups.filter(x=>x!==gid):[...(w.groups||[]),gid]}:w));
+  const updGG=(id,gid)=>savG(grammar.map(g=>g.id===id?{...g,groups:(g.groups||[]).includes(gid)?g.groups.filter(x=>x!==gid):[...(g.groups||[]),gid]}:g));
+  const mvV=(id,dir)=>savV(swapItems(vocab,id,dir));
+  const mvG=(id,dir)=>savG(swapItems(grammar,id,dir));
+
+  const handleReset=()=>{
+    const lg=buildLessonGroups();const nv=assignLessonGroups(MNN_VOCAB,lg);
+    savV(nv);savG(DEFAULT_GRAMMAR.map(g=>({groups:[],notes:"",...g})));
+    savVG(lg);savGG([]);const ns={...DEFAULT_SETTINGS};setSettings(ns);saveLS("jp_settings",ns);
+  };
+
+  const q=search.toLowerCase();
+  const ag=tab==="vocab"?vocabGroups:grammarGroups;
+  const dv=reorderMode?vocab:vocab.filter(w=>(!q||w.japanese.includes(q)||w.romaji.toLowerCase().includes(q)||w.meaning.toLowerCase().includes(q)||w.hiragana.includes(q))&&(filterType==="all"||w.type===filterType)&&(filterGroup==="all"||(w.groups||[]).includes(Number(filterGroup))));
+  const dg=reorderMode?grammar:grammar.filter(g=>(!q||g.pattern.includes(q)||g.romaji.toLowerCase().includes(q)||g.meaning.toLowerCase().includes(q))&&(filterGroup==="all"||(g.groups||[]).includes(Number(filterGroup))));
+
+  const TABS=["vocab","grammar","study","favorites","add","settings"];
+  const LABELS={vocab:"Vocabulary",grammar:"Grammar",study:"📚 Study",favorites:"★ Favorites",add:"+ Add",settings:"Settings"};
+
+  const btnStyle=(t)=>({padding:"7px 14px",borderRadius:8,border:"0.5px solid "+(tab===t?"#1a1a1a":"#e8e8e5"),background:tab===t?"#f5f5f3":"none",cursor:"pointer",fontWeight:tab===t?500:400,color:"#1a1a1a",fontSize:13});
+
+  return <div>
+    <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:20}}>
+      <span style={{fontSize:22,fontWeight:500}}>日本語</span>
+      <span style={{fontSize:15,color:"#6b6b6b"}}>Japanese Study App</span>
+    </div>
+    <div style={{display:"flex",gap:6,marginBottom:20,flexWrap:"wrap"}}>
+      {TABS.map(t=><button key={t} onClick={()=>{setTab(t);setReorderMode(false);setFilterGroup("all");}} style={btnStyle(t)}>{LABELS[t]}</button>)}
+    </div>
+
+    {(tab==="vocab"||tab==="grammar")&&<div style={{display:"flex",gap:8,marginBottom:16,alignItems:"center",flexWrap:"wrap"}}>
+      {!reorderMode&&<><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" style={{flex:1,minWidth:120,padding:"8px 12px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",fontSize:14,color:"#1a1a1a"}}/>
+      {tab==="vocab"&&<select value={filterType} onChange={e=>setFilterType(e.target.value)} style={{padding:"8px 10px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",fontSize:13}}><option value="all">All types</option>{["verb","noun","adjective","adverb","other"].map(t=><option key={t} value={t}>{t}</option>)}</select>}
+      {ag.length>0&&<select value={filterGroup} onChange={e=>setFilterGroup(e.target.value)} style={{padding:"8px 10px",borderRadius:8,border:"0.5px solid #d1d1ce",background:"#f5f5f3",fontSize:13}}><option value="all">All groups</option>{ag.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>}</>}
+      <button onClick={()=>{setReorderMode(r=>!r);setSearch("");setFilterGroup("all");}} style={{padding:"8px 14px",borderRadius:8,border:"0.5px solid "+(reorderMode?"#1a1a1a":"#d1d1ce"),background:reorderMode?"#f5f5f3":"none",cursor:"pointer",fontSize:13,fontWeight:reorderMode?500:400,whiteSpace:"nowrap"}}>{reorderMode?"✓ Done":"⇅ Reorder"}</button>
+    </div>}
+
+    {reorderMode&&<p style={{fontSize:13,color:"#6b6b6b",marginBottom:14,marginTop:-4}}>Use ▲ ▼ to reorder. Click "Done" when finished.</p>}
+
+    {tab==="vocab"&&<div>{dv.length===0&&<p style={{color:"#6b6b6b",fontSize:14}}>No words found.</p>}{dv.map((w,i)=><div key={w.id}>{i>0&&<hr style={{border:"none",borderTop:"1px solid #D3D1C7",margin:0}}/>}<VocabCard word={w} onToggleFav={togVF} onDelete={delV} onUpdateGroups={updVG} settings={settings} vocabGroups={vocabGroups} reorderMode={reorderMode} onMoveUp={()=>mvV(w.id,-1)} onMoveDown={()=>mvV(w.id,1)} isFirst={i===0} isLast={i===dv.length-1}/></div>)}</div>}
+
+    {tab==="grammar"&&<div>
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
+        <button onClick={()=>setShowNotes(s=>!s)} style={{fontSize:13,padding:"5px 14px",borderRadius:8,border:"0.5px solid #d1d1ce",background:showNotes?"#f5f5f3":"none",cursor:"pointer",color:"#6b6b6b"}}>{showNotes?"📝 Hide notes":"📝 Show notes"}</button>
+      </div>
+      {dg.length===0&&<p style={{color:"#6b6b6b",fontSize:14}}>No grammar patterns found.</p>}
+      {dg.map((g,i)=><div key={g.id}>{i>0&&<hr style={{border:"none",borderTop:"1px solid #D3D1C7",margin:0}}/>}<GrammarCard item={g} onToggleFav={togGF} onDelete={delG} onUpdateNotes={updN} onUpdateGroups={updGG} settings={settings} grammarGroups={grammarGroups} reorderMode={reorderMode} onMoveUp={()=>mvG(g.id,-1)} onMoveDown={()=>mvG(g.id,1)} isFirst={i===0} isLast={i===dg.length-1} showNotes={showNotes}/></div>)}
+    </div>}
+
+    {tab==="study"&&<StudyTab vocab={vocab} vocabGroups={vocabGroups}/>}
+
+    {tab==="favorites"&&<div>
+      {vocab.filter(w=>w.favorite).length===0&&grammar.filter(g=>g.favorite).length===0&&<p style={{color:"#6b6b6b",fontSize:14}}>No favorites yet.</p>}
+      {vocab.filter(w=>w.favorite).length>0&&<><p style={{fontSize:13,fontWeight:500,color:"#6b6b6b",marginBottom:10,marginTop:0}}>Vocabulary</p>{vocab.filter(w=>w.favorite).map((w,i)=><div key={w.id}>{i>0&&<hr style={{border:"none",borderTop:"1px solid #D3D1C7",margin:0}}/>}<VocabCard word={w} onToggleFav={togVF} onDelete={delV} onUpdateGroups={updVG} settings={settings} vocabGroups={vocabGroups}/></div>)}</>}
+      {grammar.filter(g=>g.favorite).length>0&&<><p style={{fontSize:13,fontWeight:500,color:"#6b6b6b",marginBottom:10,marginTop:vocab.filter(w=>w.favorite).length>0?20:0}}>Grammar</p>{grammar.filter(g=>g.favorite).map((g,i)=><div key={g.id}>{i>0&&<hr style={{border:"none",borderTop:"1px solid #D3D1C7",margin:0}}/>}<GrammarCard item={g} onToggleFav={togGF} onDelete={delG} onUpdateNotes={updN} onUpdateGroups={updGG} settings={settings} grammarGroups={grammarGroups} showNotes={showNotes}/></div>)}</>}
+    </div>}
+
+    {tab==="add"&&<AddForm onAddVocab={addV} onAddGrammar={addG} vocabGroups={vocabGroups} grammarGroups={grammarGroups}/>}
+
+    {tab==="settings"&&<SettingsTab settings={settings} onChangeSetting={updSetting} vocabGroups={vocabGroups} grammarGroups={grammarGroups} onAddVocabGroup={addVG} onDeleteVocabGroup={delVG} onAddGrammarGroup={addGG} onDeleteGrammarGroup={delGG} vocab={vocab} onUpdateVocab={savV} onUpdateVocabGroups={savVG} onReset={handleReset}/>}
+  </div>;
+}
+
+ReactDOM.render(<App/>, document.getElementById("root"));
+</script>
+</body>
+</html>
