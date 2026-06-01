@@ -688,10 +688,235 @@ function ApiKeySection() {
   const save = () => { saveLS("jp_apikey", key); setSaved(true); setTimeout(()=>setSaved(false), 2000); };
   return e("div", {style:{padding:"14px 0", borderBottom:"1px solid #D3D1C7"}},
     e("p", {style:{margin:"0 0 4px", fontSize:14, color:C.textPrimary}}, "Anthropic API key"),
-    e("p", {style:{margin:"0 0 10px", fontSize:12, color:C.textSecondary}}, "Required for AI features (conjugations, autofill, examples). Your key is stored only in your browser's localStorage."),
+    e("p", {style:{margin:"0 0 10px", fontSize:12, color:C.textSecondary}}, "Required for AI features (conjugations, autofill, examples). Stored only in your browser's localStorage."),
     e("div", {style:{display:"flex", gap:8}},
       e("input", {type:"password", value:key, onChange:ev=>setKey(ev.target.value), placeholder:"sk-ant-...", style:{flex:1, padding:"8px 10px", borderRadius:8, border:"0.5px solid "+C.borderSecondary, background:C.bgSecondary, fontSize:14, color:C.textPrimary}}),
       e("button", {onClick:save, style:{padding:"8px 16px", borderRadius:8, border:"0.5px solid "+C.borderSecondary, background:C.bgSecondary, cursor:"pointer", fontSize:13, fontWeight:500, color:C.textPrimary}}, saved?"Saved ✓":"Save")
+    )
+  );
+}
+
+// ── Google Drive helpers ──────────────────────────────────────────────────────
+
+const GDrive = {
+  SCOPE: "https://www.googleapis.com/auth/drive.file",
+  FILENAME: "japanese_study_backup.json",
+  getClientId() { return loadLS("jp_gdrive_client_id", ""); },
+  getToken() { const t = loadLS("jp_gdrive_token", null); if (!t) return null; if (Date.now() > t.expires_at) { localStorage.removeItem("jp_gdrive_token"); return null; } return t.access_token; },
+  saveToken(token, expiresIn) { saveLS("jp_gdrive_token", {access_token:token, expires_at:Date.now()+expiresIn*1000-60000}); },
+  clearToken() { localStorage.removeItem("jp_gdrive_token"); },
+
+  signIn(clientId) {
+    return new Promise((resolve, reject) => {
+      const redirectUri = window.location.origin + window.location.pathname;
+      const state = Math.random().toString(36).slice(2);
+      saveLS("jp_gdrive_oauth_state", state);
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: "token",
+        scope: GDrive.SCOPE,
+        state,
+        include_granted_scopes: "true",
+      });
+      const popup = window.open("https://accounts.google.com/o/oauth2/v2/auth?"+params, "gdrive_auth", "width=500,height=650,left=200,top=100");
+      if (!popup) { reject(new Error("Popup blocked. Allow popups for this page.")); return; }
+      const timer = setInterval(() => {
+        try {
+          if (popup.closed) { clearInterval(timer); reject(new Error("Sign-in cancelled.")); return; }
+          const url = popup.location.href;
+          if (url.startsWith(redirectUri) && url.includes("access_token")) {
+            clearInterval(timer); popup.close();
+            const hash = new URLSearchParams(popup.location.hash.slice(1));
+            const retState = hash.get("state");
+            if (retState !== loadLS("jp_gdrive_oauth_state","")) { reject(new Error("State mismatch.")); return; }
+            const token = hash.get("access_token");
+            const expiresIn = parseInt(hash.get("expires_in")||"3600");
+            GDrive.saveToken(token, expiresIn);
+            resolve(token);
+          }
+        } catch {}
+      }, 300);
+      setTimeout(() => { clearInterval(timer); if (!popup.closed) popup.close(); reject(new Error("Sign-in timed out.")); }, 120000);
+    });
+  },
+
+  async getToken_or_signin(clientId) {
+    const existing = GDrive.getToken();
+    if (existing) return existing;
+    return GDrive.signIn(clientId);
+  },
+
+  async findFile(token) {
+    const q = encodeURIComponent("name='"+GDrive.FILENAME+"' and trashed=false");
+    const res = await fetch("https://www.googleapis.com/drive/v3/files?q="+q+"&fields=files(id,name,modifiedTime)&spaces=drive", {
+      headers:{Authorization:"Bearer "+token}
+    });
+    if (!res.ok) throw new Error("Drive API error: "+res.status);
+    const data = await res.json();
+    return data.files?.[0] || null;
+  },
+
+  async uploadFile(token, jsonStr, existingId) {
+    const meta = {name: GDrive.FILENAME, mimeType:"application/json"};
+    const form = new FormData();
+    form.append("metadata", new Blob([JSON.stringify(meta)], {type:"application/json"}));
+    form.append("file", new Blob([jsonStr], {type:"application/json"}));
+    const url = existingId
+      ? "https://www.googleapis.com/upload/drive/v3/files/"+existingId+"?uploadType=multipart"
+      : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+    const res = await fetch(url, {
+      method: existingId ? "PATCH" : "POST",
+      headers:{Authorization:"Bearer "+token},
+      body: form,
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.error?.message || "Upload failed"); }
+    return res.json();
+  },
+
+  async downloadFile(token, fileId) {
+    const res = await fetch("https://www.googleapis.com/drive/v3/files/"+fileId+"?alt=media", {
+      headers:{Authorization:"Bearer "+token}
+    });
+    if (!res.ok) throw new Error("Download failed: "+res.status);
+    return res.text();
+  },
+};
+
+// Handle OAuth redirect (token in URL hash on page load)
+(function handleOAuthRedirect() {
+  if (window.location.hash.includes("access_token")) {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const token = hash.get("access_token");
+    const expiresIn = parseInt(hash.get("expires_in")||"3600");
+    const state = hash.get("state");
+    if (token && state === loadLS("jp_gdrive_oauth_state","")) {
+      GDrive.saveToken(token, expiresIn);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }
+})();
+
+function GoogleDriveSection({vocab, grammar, vocabGroups, grammarGroups, settings, onImport}) {
+  const [clientId, setClientId] = useState(() => loadLS("jp_gdrive_client_id",""));
+  const [clientIdSaved, setClientIdSaved] = useState(false);
+  const [signedIn, setSignedIn] = useState(() => !!GDrive.getToken());
+  const [status, setStatus] = useState("");
+  const [statusType, setStatusType] = useState(""); // "ok" | "error" | "info"
+  const [busy, setBusy] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
+
+  const msg = (text, type) => { setStatus(text); setStatusType(type); };
+  const clearMsg = () => { setStatus(""); setStatusType(""); };
+
+  const saveClientId = () => {
+    saveLS("jp_gdrive_client_id", clientId);
+    setClientIdSaved(true);
+    setTimeout(()=>setClientIdSaved(false), 2000);
+  };
+
+  const handleSignIn = async () => {
+    const cid = loadLS("jp_gdrive_client_id","");
+    if (!cid) { msg("Enter and save your Google OAuth Client ID first.", "error"); return; }
+    clearMsg(); setBusy(true);
+    try {
+      await GDrive.signIn(cid);
+      setSignedIn(true);
+      msg("Signed in to Google Drive.", "ok");
+    } catch(err) { msg(err.message, "error"); }
+    setBusy(false);
+  };
+
+  const handleSignOut = () => { GDrive.clearToken(); setSignedIn(false); msg("Signed out.", "info"); };
+
+  const handleSave = async () => {
+    clearMsg(); setBusy(true);
+    try {
+      const cid = loadLS("jp_gdrive_client_id","");
+      const token = await GDrive.getToken_or_signin(cid);
+      setSignedIn(true);
+      msg("Checking Drive…", "info");
+      const existing = await GDrive.findFile(token);
+      const payload = {version:1, exportedAt:new Date().toISOString(), vocab, grammar, vocabGroups, grammarGroups, settings};
+      await GDrive.uploadFile(token, JSON.stringify(payload, null, 2), existing?.id);
+      msg("Saved to Google Drive ✓"+(existing?" (updated)":""), "ok");
+    } catch(err) {
+      if (err.message.includes("401")||err.message.includes("token")) { GDrive.clearToken(); setSignedIn(false); }
+      msg(err.message, "error");
+    }
+    setBusy(false);
+  };
+
+  const handleLoad = async () => {
+    clearMsg(); setBusy(true);
+    try {
+      const cid = loadLS("jp_gdrive_client_id","");
+      const token = await GDrive.getToken_or_signin(cid);
+      setSignedIn(true);
+      msg("Looking for backup…", "info");
+      const file = await GDrive.findFile(token);
+      if (!file) { msg("No backup file found on Drive.", "error"); setBusy(false); return; }
+      const text = await GDrive.downloadFile(token, file.id);
+      const data = JSON.parse(text);
+      if (!data.vocab||!Array.isArray(data.vocab)) throw new Error("Missing vocab array");
+      if (!data.grammar||!Array.isArray(data.grammar)) throw new Error("Missing grammar array");
+      onImport({vocab:data.vocab, grammar:data.grammar, vocabGroups:Array.isArray(data.vocabGroups)?data.vocabGroups:[], grammarGroups:Array.isArray(data.grammarGroups)?data.grammarGroups:[], settings:data.settings||null});
+      const d = new Date(file.modifiedTime);
+      msg("Loaded backup from Drive (saved "+d.toLocaleDateString()+") ✓", "ok");
+    } catch(err) {
+      if (err.message.includes("401")||err.message.includes("token")) { GDrive.clearToken(); setSignedIn(false); }
+      msg(err.message, "error");
+    }
+    setBusy(false);
+  };
+
+  const btnStyle = (col) => ({padding:"8px 18px", borderRadius:8, border:"0.5px solid "+(col||C.borderSecondary), background:col?"none":C.bgSecondary, cursor:busy?"default":"pointer", fontSize:13, fontWeight:500, color:col||C.textPrimary, opacity:busy?0.6:1});
+  const statusColor = statusType==="ok"?"#3B6D11":statusType==="error"?"#A32D2D":C.textSecondary;
+
+  return e("div", null,
+    // Header row
+    e("div", {style:{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6}},
+      e("div", null,
+        e("p", {style:{margin:0, fontSize:14, color:C.textPrimary}}, "Google Drive"),
+        e("p", {style:{margin:"2px 0 0", fontSize:12, color:C.textSecondary}}, signedIn ? "Connected — saves to 'japanese_study_backup.json'" : "Back up and restore your data to Google Drive.")
+      ),
+      e("div", {style:{display:"flex", gap:8, alignItems:"center"}},
+        signedIn
+          ? e("span", {style:{fontSize:12, color:"#3B6D11", fontWeight:500}}, "● Connected")
+          : e("span", {style:{fontSize:12, color:"#B4B2A9"}}, "○ Not connected")
+      )
+    ),
+
+    // Action buttons
+    e("div", {style:{display:"flex", gap:8, flexWrap:"wrap", marginBottom:8}},
+      !signedIn && e("button", {onClick:handleSignIn, disabled:busy, style:btnStyle(C.green)}, "Sign in with Google"),
+      signedIn && e(React.Fragment, null,
+        e("button", {onClick:handleSave, disabled:busy, style:{...btnStyle(), background:C.green, border:"none", color:"#fff"}}, busy?"Working…":"Save to Drive"),
+        e("button", {onClick:handleLoad, disabled:busy, style:btnStyle()}, "Load from Drive"),
+        e("button", {onClick:handleSignOut, disabled:busy, style:{...btnStyle(), fontSize:12, color:C.textSecondary}}, "Sign out")
+      )
+    ),
+
+    status && e("p", {style:{fontSize:13, color:statusColor, margin:"4px 0 8px"}}, status),
+
+    // Setup accordion
+    e("button", {onClick:()=>setShowSetup(s=>!s), style:{fontSize:12, color:C.textSecondary, background:"none", border:"none", cursor:"pointer", padding:0, textDecoration:"underline", textUnderlineOffset:2}},
+      showSetup ? "Hide setup instructions ▲" : "How to set up Google OAuth ▼"
+    ),
+    showSetup && e("div", {style:{marginTop:10, padding:"12px 14px", background:C.bgSecondary, borderRadius:8, fontSize:12, color:C.textSecondary, lineHeight:1.7}},
+      e("p", {style:{fontWeight:500, color:C.textPrimary, margin:"0 0 8px"}}, "One-time setup (free, ~5 minutes)"),
+      e("ol", {style:{margin:0, paddingLeft:18}},
+        e("li", null, "Go to ", e("a", {href:"https://console.cloud.google.com/", target:"_blank", style:{color:"#185FA5"}}, "Google Cloud Console"), " and create a new project."),
+        e("li", null, "Enable the ", e("strong", null, "Google Drive API"), " for the project."),
+        e("li", null, "Go to ", e("strong", null, "APIs & Services → Credentials"), " → Create Credentials → OAuth client ID."),
+        e("li", null, "Set Application type to ", e("strong", null, "Web application"), "."),
+        e("li", {style:{fontWeight:500, color:"#A32D2D"}}, "Under Authorised JavaScript origins, add your app's URL (e.g. https://yourname.github.io). Localhost also works for testing."),
+        e("li", null, "Copy the Client ID (ends in .apps.googleusercontent.com) and paste it below.")
+      ),
+      e("div", {style:{display:"flex", gap:8, marginTop:10}},
+        e("input", {value:clientId, onChange:ev=>setClientId(ev.target.value), placeholder:"xxxxxx.apps.googleusercontent.com", style:{flex:1, padding:"7px 10px", borderRadius:7, border:"0.5px solid "+C.borderSecondary, background:C.bgPrimary, fontSize:12, color:C.textPrimary}}),
+        e("button", {onClick:saveClientId, style:{padding:"7px 14px", borderRadius:7, border:"0.5px solid "+C.borderSecondary, background:C.bgPrimary, cursor:"pointer", fontSize:12, fontWeight:500, color:C.textPrimary}}, clientIdSaved?"Saved ✓":"Save ID")
+      )
     )
   );
 }
@@ -793,6 +1018,9 @@ function SettingsTab({settings, onChangeSetting, vocabGroups, grammarGroups, onA
     section("API"),
     e(ApiKeySection),
     section("Backup"),
+    e("div", {style:{padding:"14px 0", borderBottom:"1px solid #D3D1C7"}},
+      e(GoogleDriveSection, {vocab, grammar, vocabGroups, grammarGroups, settings, onImport})
+    ),
     e(ExportImportSection, {vocab, grammar, vocabGroups, grammarGroups, settings, onImport}),
     section("Danger Zone"),
     e("div", {style:{padding:"14px 0", borderBottom:"1px solid #D3D1C7"}},
